@@ -23,6 +23,11 @@ type response struct {
 }
 
 func CheckLicense() {
+	if env.StringOptional("LICENSE_VALIDATION_LOCAL_TEST") == "true" {
+		log.Print("local license-validation test mode is enabled")
+		return
+	}
+
 	license := env.String("LICENSE_KEY")
 
 	requestBody, err := json.Marshal(request{License: license})

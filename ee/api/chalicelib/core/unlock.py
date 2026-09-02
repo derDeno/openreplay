@@ -21,6 +21,14 @@ def get_license():
 
 
 def check():
+    if config("LICENSE_VALIDATION_LOCAL_TEST", default=False, cast=bool):
+        now = TimeUTC.now()
+        environ["expiration"] = str(now + TimeUTC.MS_DAY)
+        environ["lastCheck"] = str(now)
+        environ["numberOfSeats"] = "9999"
+        logger.warning("local license-validation test mode is enabled")
+        return
+
     license = get_license()
     if license is None or len(license) == 0:
         logger.warning("!! license key not found, please provide a LICENSE_KEY env var")

@@ -1,0 +1,136 @@
+name: Publish container images
+
+on:
+  workflow_dispatch:
+    inputs:
+      edition:
+        description: Image edition to publish
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - foss
+          - ee
+  push:
+    branches:
+      - main
+    paths:
+      - api/**
+      - assist/**
+      - assist-server/**
+      - assist-stats/**
+      - backend/**
+      - ee/**
+      - frontend/**
+      - sourcemapreader/**
+      - scripts/lib/_docker.sh
+      - .github/workflows/publish-images.yaml
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: publish-images-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      REGISTRY: ghcr.io
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Configure image names
+        shell: bash
+        run: |
+          set -euo pipefail
+          repository="${GITHUB_REPOSITORY,,}"
+          tag="${GITHUB_REF_NAME//\//-}-${GITHUB_SHA::12}"
+          {
+            echo "DOCKER_REPO=${REGISTRY}/${repository}"
+            echo "IMAGE_TAG=${tag}"
+            echo "EE_IMAGE_TAG=${tag}-ee"
+          } >> "$GITHUB_ENV"
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and publish FOSS images
+        if: github.event_name == 'push' || inputs.edition == 'all' || inputs.edition == 'foss'
+        shell: bash
+        run: |
+          set -euo pipefail
+          export DOCKER_REPO IMAGE_TAG
+          export PUSH_IMAGE=0
+
+          (cd api && bash build.sh)
+          (cd api && bash build_alerts.sh)
+          (cd assist && bash build.sh)
+          (cd backend && bash build.sh)
+          (cd backend && bash build.sh connector)
+          (cd backend && bash build.sh video-replays)
+          (cd frontend && bash build.sh)
+          (cd sourcemapreader && bash build.sh)
+
+          images=(alerts chalice assist frontend sourcemapreader)
+          mapfile -t workers < <(find backend/cmd -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort)
+          images+=("${workers[@]}")
+          for image in "${images[@]}"; do
+            docker push "${DOCKER_REPO}/${image}:${IMAGE_TAG}"
+            docker tag "${DOCKER_REPO}/${image}:${IMAGE_TAG}" "${DOCKER_REPO}/${image}:main"
+            docker push "${DOCKER_REPO}/${image}:main"
+          done
+
+      - name: Build and publish Enterprise images
+        if: github.event_name == 'push' || inputs.edition == 'all' || inputs.edition == 'ee'
+        shell: bash
+        run: |
+          set -euo pipefail
+          export DOCKER_REPO
+          export IMAGE_TAG="${EE_IMAGE_TAG}"
+          export PUSH_IMAGE=0
+
+          (cd api && bash build.sh ee)
+          (cd api && bash build_alerts.sh ee)
+          (cd api && bash build_crons.sh ee)
+          (cd assist && bash build.sh ee)
+          (cd assist-server && bash build.sh)
+          (cd assist-stats && bash build.sh ee)
+          (cd backend && bash build.sh ee)
+          (cd backend && bash build.sh ee connector)
+          (cd backend && bash build.sh ee video-replays)
+          (cd frontend && bash build.sh ee)
+          (cd sourcemapreader && bash build.sh ee)
+
+          images=(alerts chalice crons assist assist-server assist-stats frontend sourcemapreader)
+          mapfile -t workers < <(find backend/cmd -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort)
+          images+=("${workers[@]}")
+          for image in "${images[@]}"; do
+            docker push "${DOCKER_REPO}/${image}:${IMAGE_TAG}"
+            docker tag "${DOCKER_REPO}/${image}:${IMAGE_TAG}" "${DOCKER_REPO}/${image}:main-ee"
+            docker push "${DOCKER_REPO}/${image}:main-ee"
+          done
+
+      - name: Publish summary
+        shell: bash
+        run: |
+          {
+            echo '## Published images'
+            echo
+            echo "Registry prefix: \`${DOCKER_REPO}\`"
+            echo
+            echo "FOSS tag: \`${IMAGE_TAG}\`"
+            echo "Enterprise tag: \`${EE_IMAGE_TAG}\`"
+            echo "Convenience tags: \`main\` and \`main-ee\`"
+          } >> "$GITHUB_STEP_SUMMARY"

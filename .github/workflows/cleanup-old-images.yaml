@@ -27,8 +27,28 @@ jobs:
       fail-fast: false
       matrix:
         image:
+          - alerts
+          - assist
+          - assist-server
+          - assist-stats
+          - chalice
+          - crons
+          - frontend
           - kafka
           - postgres
+          - sourcemapreader
+          - api
+          - assets
+          - canvases
+          - db
+          - ender
+          - heuristics
+          - http
+          - images
+          - integrations
+          - sink
+          - spot
+          - storage
           - valkey
     steps:
       - name: Prune old untagged versions
@@ -36,7 +56,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           organization: ${{ github.repository_owner }}
-          container: ${{ matrix.image }}
+          container: ${{ github.event.repository.name }}/${{ matrix.image }}
           dry-run: ${{ github.event.inputs.dry-run || 'false' }}
           keep-younger-than: 365  # Keep versions newer than 1 year
           keep-last: 5  # Always keep the 5 most recent versions
@@ -47,7 +67,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           organization: ${{ github.repository_owner }}
-          container: ${{ matrix.image }}
+          container: ${{ github.event.repository.name }}/${{ matrix.image }}
           dry-run: ${{ github.event.inputs.dry-run || 'false' }}
           keep-younger-than: 90  # Keep PR/test versions newer than 90 days
           keep-last: 10  # Keep the 10 most recent PR/test versions

@@ -82,7 +82,8 @@ jobs:
             esac
           fi
 
-          image_name="${REGISTRY}/${IMAGE_PREFIX}/${name}"
+          repository="${IMAGE_PREFIX,,}"
+          image_name="${REGISTRY}/${repository}/${name}"
           tags="${image_name}:${version}"
           if [[ "$name" != migration && "$name" != postgres || "$version" == 18 ]]; then
             tags+=$'\n'"${image_name}:latest"

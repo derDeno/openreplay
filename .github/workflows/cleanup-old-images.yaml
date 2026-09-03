@@ -29,7 +29,6 @@ jobs:
         image:
           - alerts
           - assist
-          - assist-server
           - assist-stats
           - chalice
           - crons

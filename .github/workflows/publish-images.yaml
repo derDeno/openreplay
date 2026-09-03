@@ -18,7 +18,6 @@ on:
     paths:
       - api/**
       - assist/**
-      - assist-server/**
       - assist-stats/**
       - backend/**
       - ee/**
@@ -43,6 +42,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - name: Configure image names
         shell: bash
@@ -56,6 +57,100 @@ jobs:
             echo "EE_IMAGE_TAG=${tag}-ee"
           } >> "$GITHUB_ENV"
 
+      - name: Select changed images
+        id: changes
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EDITION: ${{ inputs.edition || 'all' }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+
+          mapfile -t backend_images < <(find backend/cmd -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort)
+          all_foss=(chalice alerts assist frontend sourcemapreader "${backend_images[@]}")
+          all_ee=(chalice alerts crons assist assist-stats frontend sourcemapreader "${backend_images[@]}")
+          foss_images=()
+          ee_images=()
+
+          add_foss() {
+            local image
+            for image in "$@"; do
+              [[ " ${foss_images[*]} " == *" ${image} "* ]] || foss_images+=("$image")
+            done
+          }
+
+          add_ee() {
+            local image
+            for image in "$@"; do
+              [[ " ${ee_images[*]} " == *" ${image} "* ]] || ee_images+=("$image")
+            done
+          }
+
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            [[ "$EDITION" == "all" || "$EDITION" == "foss" ]] && foss_images=("${all_foss[@]}")
+            [[ "$EDITION" == "all" || "$EDITION" == "ee" ]] && ee_images=("${all_ee[@]}")
+          else
+            if [[ -z "$BEFORE" || "$BEFORE" =~ ^0+$ ]]; then
+              changed_files="$(git diff-tree --root --no-commit-id --name-only -r "$GITHUB_SHA")"
+            else
+              changed_files="$(git diff --name-only "$BEFORE" "$GITHUB_SHA")"
+            fi
+
+            if grep -Eq '^(scripts/lib/_docker\.sh|\.github/workflows/publish-images\.yaml)$' <<< "$changed_files"; then
+              foss_images=("${all_foss[@]}")
+              ee_images=("${all_ee[@]}")
+            else
+              if grep -Eq '^api/' <<< "$changed_files"; then
+                add_foss chalice alerts
+                add_ee chalice alerts crons
+              fi
+              if grep -Eq '^ee/api/' <<< "$changed_files"; then
+                add_ee chalice alerts crons
+              fi
+
+              if grep -Eq '^assist/' <<< "$changed_files"; then
+                add_foss assist
+                add_ee assist
+              fi
+              if grep -Eq '^ee/assist/' <<< "$changed_files"; then
+                add_ee assist
+              fi
+
+              if grep -Eq '^(assist-stats/|ee/assist-stats/)' <<< "$changed_files"; then
+                add_ee assist-stats
+              fi
+
+              if grep -Eq '^backend/' <<< "$changed_files"; then
+                add_foss "${backend_images[@]}"
+                add_ee "${backend_images[@]}"
+              fi
+              if grep -Eq '^ee/backend/' <<< "$changed_files"; then
+                add_ee "${backend_images[@]}"
+              fi
+
+              if grep -Eq '^frontend/' <<< "$changed_files"; then
+                add_foss frontend
+                add_ee frontend
+              fi
+              if grep -Eq '^ee/frontend/' <<< "$changed_files"; then
+                add_ee frontend
+              fi
+
+              if grep -Eq '^(sourcemapreader/|assist/utils/)' <<< "$changed_files"; then
+                add_foss sourcemapreader
+                add_ee sourcemapreader
+              fi
+              if grep -Eq '^ee/sourcemapreader/' <<< "$changed_files"; then
+                add_ee sourcemapreader
+              fi
+            fi
+          fi
+
+          printf 'foss_images=%s\n' "${foss_images[*]}" >> "$GITHUB_OUTPUT"
+          printf 'ee_images=%s\n' "${ee_images[*]}" >> "$GITHUB_OUTPUT"
+          printf 'FOSS images: %s\nEnterprise images: %s\n' "${foss_images[*]:-none}" "${ee_images[*]:-none}"
+
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -67,25 +162,25 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build and publish FOSS images
-        if: github.event_name == 'push' || inputs.edition == 'all' || inputs.edition == 'foss'
+        if: steps.changes.outputs.foss_images != ''
         shell: bash
         run: |
           set -euo pipefail
           export DOCKER_REPO IMAGE_TAG
           export PUSH_IMAGE=0
 
-          (cd api && bash build.sh)
-          (cd api && bash build_alerts.sh)
-          (cd assist && bash build.sh)
-          (cd backend && bash build.sh)
-          (cd backend && bash build.sh connector)
-          (cd backend && bash build.sh video-replays)
-          (cd frontend && bash build.sh)
-          (cd sourcemapreader && bash build.sh)
+          read -r -a images <<< "${{ steps.changes.outputs.foss_images }}"
+          for image in "${images[@]}"; do
+            case "$image" in
+              chalice) (cd api && bash build.sh) ;;
+              alerts) (cd api && bash build_alerts.sh) ;;
+              assist) (cd assist && bash build.sh) ;;
+              frontend) (cd frontend && bash build.sh) ;;
+              sourcemapreader) (cd sourcemapreader && bash build.sh) ;;
+              *) (cd backend && bash build.sh "$image") ;;
+            esac
+          done
 
-          images=(alerts chalice assist frontend sourcemapreader)
-          mapfile -t workers < <(find backend/cmd -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort)
-          images+=("${workers[@]}")
           for image in "${images[@]}"; do
             docker push "${DOCKER_REPO}/${image}:${IMAGE_TAG}"
             docker tag "${DOCKER_REPO}/${image}:${IMAGE_TAG}" "${DOCKER_REPO}/${image}:main"
@@ -93,7 +188,7 @@ jobs:
           done
 
       - name: Build and publish Enterprise images
-        if: github.event_name == 'push' || inputs.edition == 'all' || inputs.edition == 'ee'
+        if: steps.changes.outputs.ee_images != ''
         shell: bash
         run: |
           set -euo pipefail
@@ -101,21 +196,20 @@ jobs:
           export IMAGE_TAG="${EE_IMAGE_TAG}"
           export PUSH_IMAGE=0
 
-          (cd api && bash build.sh ee)
-          (cd api && bash build_alerts.sh ee)
-          (cd api && bash build_crons.sh ee)
-          (cd assist && bash build.sh ee)
-          (cd assist-server && bash build.sh)
-          (cd assist-stats && bash build.sh ee)
-          (cd backend && bash build.sh ee)
-          (cd backend && bash build.sh ee connector)
-          (cd backend && bash build.sh ee video-replays)
-          (cd frontend && bash build.sh ee)
-          (cd sourcemapreader && bash build.sh ee)
+          read -r -a images <<< "${{ steps.changes.outputs.ee_images }}"
+          for image in "${images[@]}"; do
+            case "$image" in
+              chalice) (cd api && bash build.sh ee) ;;
+              alerts) (cd api && bash build_alerts.sh ee) ;;
+              crons) (cd api && bash build_crons.sh ee) ;;
+              assist) (cd assist && bash build.sh ee) ;;
+              assist-stats) (cd assist-stats && bash build.sh ee) ;;
+              frontend) (cd frontend && bash build.sh ee) ;;
+              sourcemapreader) (cd sourcemapreader && bash build.sh ee) ;;
+              *) (cd backend && bash build.sh ee "$image") ;;
+            esac
+          done
 
-          images=(alerts chalice crons assist assist-server assist-stats frontend sourcemapreader)
-          mapfile -t workers < <(find backend/cmd -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort)
-          images+=("${workers[@]}")
           for image in "${images[@]}"; do
             docker push "${DOCKER_REPO}/${image}:${IMAGE_TAG}"
             docker tag "${DOCKER_REPO}/${image}:${IMAGE_TAG}" "${DOCKER_REPO}/${image}:main-ee"

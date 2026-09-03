@@ -185,6 +185,8 @@ jobs:
             docker push "${DOCKER_REPO}/${image}:${IMAGE_TAG}"
             docker tag "${DOCKER_REPO}/${image}:${IMAGE_TAG}" "${DOCKER_REPO}/${image}:main"
             docker push "${DOCKER_REPO}/${image}:main"
+            docker tag "${DOCKER_REPO}/${image}:${IMAGE_TAG}" "${DOCKER_REPO}/${image}:latest"
+            docker push "${DOCKER_REPO}/${image}:latest"
           done
 
       - name: Build and publish Enterprise images
@@ -214,6 +216,8 @@ jobs:
             docker push "${DOCKER_REPO}/${image}:${IMAGE_TAG}"
             docker tag "${DOCKER_REPO}/${image}:${IMAGE_TAG}" "${DOCKER_REPO}/${image}:main-ee"
             docker push "${DOCKER_REPO}/${image}:main-ee"
+            docker tag "${DOCKER_REPO}/${image}:${IMAGE_TAG}" "${DOCKER_REPO}/${image}:latest-ee"
+            docker push "${DOCKER_REPO}/${image}:latest-ee"
           done
 
       - name: Publish summary
@@ -226,5 +230,5 @@ jobs:
             echo
             echo "FOSS tag: \`${IMAGE_TAG}\`"
             echo "Enterprise tag: \`${EE_IMAGE_TAG}\`"
-            echo "Convenience tags: \`main\` and \`main-ee\`"
+            echo "Convenience tags: \`main\`, \`latest\`, \`main-ee\`, and \`latest-ee\`"
           } >> "$GITHUB_STEP_SUMMARY"

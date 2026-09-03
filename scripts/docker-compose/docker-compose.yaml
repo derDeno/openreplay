@@ -192,7 +192,7 @@ services:
           clickhouse-client -h clickhouse-openreplay-clickhouse.db.svc.cluster.local --user default --port 9000 --multiquery < /tmp/init_schema.sql || true
   
   alerts-openreplay:
-    image: public.ecr.aws/p1t3u8a3/alerts:${ALERTS_VERSION}
+    image: ghcr.io/derdeno/openreplay/alerts:latest-ee
     domainname: app.svc.cluster.local
     container_name: alerts
     networks:
@@ -218,7 +218,7 @@ services:
   
   
   api-openreplay:
-    image: public.ecr.aws/p1t3u8a3/api:${API_VERSION}
+    image: ghcr.io/derdeno/openreplay/api:latest-ee
     domainname: app.svc.cluster.local
     container_name: api
     networks:
@@ -244,7 +244,7 @@ services:
   
   
   http-openreplay:
-    image: public.ecr.aws/p1t3u8a3/http:${HTTP_VERSION}
+    image: ghcr.io/derdeno/openreplay/http:latest-ee
     domainname: app.svc.cluster.local
     container_name: http
     networks:
@@ -270,7 +270,7 @@ services:
   
   
   images-openreplay:
-    image: public.ecr.aws/p1t3u8a3/images:${IMAGES_VERSION}
+    image: ghcr.io/derdeno/openreplay/images:latest-ee
     domainname: app.svc.cluster.local
     container_name: images
     networks:
@@ -296,7 +296,7 @@ services:
   
   
   integrations-openreplay:
-    image: public.ecr.aws/p1t3u8a3/integrations:${INTEGRATIONS_VERSION}
+    image: ghcr.io/derdeno/openreplay/integrations:latest-ee
     domainname: app.svc.cluster.local
     container_name: integrations
     networks:
@@ -322,7 +322,7 @@ services:
   
   
   sink-openreplay:
-    image: public.ecr.aws/p1t3u8a3/sink:${SINK_VERSION}
+    image: ghcr.io/derdeno/openreplay/sink:latest-ee
     domainname: app.svc.cluster.local
     container_name: sink
     networks:
@@ -348,7 +348,7 @@ services:
   
   
   sourcemapreader-openreplay:
-    image: public.ecr.aws/p1t3u8a3/sourcemapreader:${SOURCEMAPREADER_VERSION}
+    image: ghcr.io/derdeno/openreplay/sourcemapreader:latest-ee
     domainname: app.svc.cluster.local
     container_name: sourcemapreader
     networks:
@@ -374,7 +374,7 @@ services:
   
   
   spot-openreplay:
-    image: public.ecr.aws/p1t3u8a3/spot:${SPOT_VERSION}
+    image: ghcr.io/derdeno/openreplay/spot:latest-ee
     domainname: app.svc.cluster.local
     container_name: spot
     networks:
@@ -400,7 +400,7 @@ services:
   
   
   storage-openreplay:
-    image: public.ecr.aws/p1t3u8a3/storage:${STORAGE_VERSION}
+    image: ghcr.io/derdeno/openreplay/storage:latest-ee
     domainname: app.svc.cluster.local
     container_name: storage
     networks:
@@ -426,7 +426,7 @@ services:
   
   
   assets-openreplay:
-    image: public.ecr.aws/p1t3u8a3/assets:${ASSETS_VERSION}
+    image: ghcr.io/derdeno/openreplay/assets:latest-ee
     domainname: app.svc.cluster.local
     container_name: assets
     networks:
@@ -452,7 +452,7 @@ services:
   
   
   assist-openreplay:
-    image: public.ecr.aws/p1t3u8a3/assist:${ASSIST_VERSION}
+    image: ghcr.io/derdeno/openreplay/assist:latest-ee
     domainname: app.svc.cluster.local
     container_name: assist
     networks:
@@ -475,10 +475,34 @@ services:
         condition: service_healthy
     environment: {}  # Fallback empty environment if env_file is missing
     restart: unless-stopped
+
+
+  assist-stats-openreplay:
+    image: ghcr.io/derdeno/openreplay/assist-stats:latest-ee
+    domainname: app.svc.cluster.local
+    container_name: assist-stats
+    networks:
+      openreplay-net:
+        aliases:
+          - assist-stats-openreplay
+          - assist-stats-openreplay.app.svc.cluster.local
+    env_file:
+      - docker-envs/assist-stats.env
+    depends_on:
+      postgresql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/', timeout=5)"]
+      interval: 15s
+      timeout: 10s
+      retries: 8
+      start_period: 30s
+    environment: {}  # Fallback empty environment if env_file is missing
+    restart: unless-stopped
   
   
   canvases-openreplay:
-    image: public.ecr.aws/p1t3u8a3/canvases:${CANVASES_VERSION}
+    image: ghcr.io/derdeno/openreplay/canvases:latest-ee
     domainname: app.svc.cluster.local
     container_name: canvases
     networks:
@@ -504,7 +528,7 @@ services:
   
   
   chalice-openreplay:
-    image: public.ecr.aws/p1t3u8a3/chalice:${CHALICE_VERSION}
+    image: ghcr.io/derdeno/openreplay/chalice:latest-ee
     domainname: app.svc.cluster.local
     container_name: chalice
     networks:
@@ -527,10 +551,64 @@ services:
         condition: service_healthy
     environment: {}  # Fallback empty environment if env_file is missing
     restart: unless-stopped
+
+
+  crons-openreplay:
+    image: ghcr.io/derdeno/openreplay/crons:latest-ee
+    domainname: app.svc.cluster.local
+    container_name: crons
+    networks:
+      openreplay-net:
+        aliases:
+          - crons-openreplay
+          - crons-openreplay.app.svc.cluster.local
+    volumes:
+      - shared-volume:/mnt/efs
+    env_file:
+      - docker-envs/chalice.env
+    depends_on:
+      postgresql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    entrypoint: ["/sbin/tini", "--", "/bin/sh", "-ec"]
+    command:
+      - |
+        run_action() {
+          action="$$1"
+          echo "Running Enterprise cron: $${action}"
+          ACTION="$${action}" ./entrypoint.sh || echo "Enterprise cron failed: $${action}"
+        }
+
+        last_minute=""
+        while true; do
+          minute=$$(date -u +%M)
+          hour=$$(date -u +%H)
+          weekday=$$(date -u +%u)
+          current="$${weekday}-$${hour}-$${minute}"
+
+          if [ "$${current}" != "$${last_minute}" ]; then
+            last_minute="$${current}"
+            [ "$${minute}" = "00" ] && run_action ASSIST_STATS
+            [ "$${hour}-$${minute}" = "01-05" ] && run_action JOB
+            [ "$${weekday}-$${hour}-$${minute}" = "1-05-00" ] && run_action REPORT
+            [ "$${minute}" = "00" ] || [ "$${minute}" = "18" ] || [ "$${minute}" = "36" ] || [ "$${minute}" = "54" ] && run_action PROJECTS_STATS
+            [ "$${weekday}-$${hour}-$${minute}" = "7-05-00" ] && run_action FIX_PROJECTS_STATS
+            [ "$${hour}-$${minute}" = "12-05" ] && run_action TELEMETRY
+          fi
+
+          sleep 10
+        done
+    environment: {}  # Fallback empty environment if env_file is missing
+    restart: unless-stopped
   
   
   db-openreplay:
-    image: public.ecr.aws/p1t3u8a3/db:${DB_VERSION}
+    image: ghcr.io/derdeno/openreplay/db:latest-ee
     domainname: app.svc.cluster.local
     container_name: db
     networks:
@@ -556,7 +634,7 @@ services:
   
   
   ender-openreplay:
-    image: public.ecr.aws/p1t3u8a3/ender:${ENDER_VERSION}
+    image: ghcr.io/derdeno/openreplay/ender:latest-ee
     domainname: app.svc.cluster.local
     container_name: ender
     networks:
@@ -582,7 +660,7 @@ services:
   
   
   frontend-openreplay:
-    image: public.ecr.aws/p1t3u8a3/frontend:${FRONTEND_VERSION}
+    image: ghcr.io/derdeno/openreplay/frontend:latest-ee
     domainname: app.svc.cluster.local
     container_name: frontend
     networks:
@@ -608,7 +686,7 @@ services:
   
   
   heuristics-openreplay:
-    image: public.ecr.aws/p1t3u8a3/heuristics:${HEURISTICS_VERSION}
+    image: ghcr.io/derdeno/openreplay/heuristics:latest-ee
     domainname: app.svc.cluster.local
     container_name: heuristics
     networks:

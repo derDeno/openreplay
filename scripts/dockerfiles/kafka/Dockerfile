@@ -1,6 +1,6 @@
 FROM cgr.dev/chainguard/wolfi-base
 
-RUN apk add --no-cache kafka~3 openssl bash tini && \
+RUN apk add --no-cache kafka~4 openssl bash tini && \
   mkdir -p /bitnami/kafka /usr/lib/kafka/logs && \
   chown -R 1001:1001 /bitnami/kafka /usr/lib/kafka/logs
 

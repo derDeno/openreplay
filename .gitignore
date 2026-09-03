@@ -3,6 +3,7 @@ public
 node_modules
 *DS_Store
 *.env
+!scripts/docker-compose/docker-envs/assist-stats.env
 *.log
 **/*.envrc
 .idea

@@ -2,7 +2,6 @@ services:
   kafka:
     image: ghcr.io/derdeno/openreplay/kafka:latest
     container_name: kafka
-    hostname: kafka
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_CLUSTER_ID: "Sjg_Rr1iQbO9xpahgDbYpQ"

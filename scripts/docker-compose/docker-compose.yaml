@@ -193,7 +193,6 @@ services:
   
   alerts-openreplay:
     image: ghcr.io/derdeno/openreplay/alerts:latest-ee
-    domainname: app.svc.cluster.local
     container_name: alerts
     networks:
       openreplay-net:
@@ -219,7 +218,6 @@ services:
   
   api-openreplay:
     image: ghcr.io/derdeno/openreplay/api:latest-ee
-    domainname: app.svc.cluster.local
     container_name: api
     networks:
       openreplay-net:
@@ -245,7 +243,6 @@ services:
   
   http-openreplay:
     image: ghcr.io/derdeno/openreplay/http:latest-ee
-    domainname: app.svc.cluster.local
     container_name: http
     networks:
       openreplay-net:
@@ -271,7 +268,6 @@ services:
   
   images-openreplay:
     image: ghcr.io/derdeno/openreplay/images:latest-ee
-    domainname: app.svc.cluster.local
     container_name: images
     networks:
       openreplay-net:
@@ -297,7 +293,6 @@ services:
   
   integrations-openreplay:
     image: ghcr.io/derdeno/openreplay/integrations:latest-ee
-    domainname: app.svc.cluster.local
     container_name: integrations
     networks:
       openreplay-net:
@@ -323,7 +318,6 @@ services:
   
   sink-openreplay:
     image: ghcr.io/derdeno/openreplay/sink:latest-ee
-    domainname: app.svc.cluster.local
     container_name: sink
     networks:
       openreplay-net:
@@ -349,7 +343,6 @@ services:
   
   sourcemapreader-openreplay:
     image: ghcr.io/derdeno/openreplay/sourcemapreader:latest-ee
-    domainname: app.svc.cluster.local
     container_name: sourcemapreader
     networks:
       openreplay-net:
@@ -375,7 +368,6 @@ services:
   
   spot-openreplay:
     image: ghcr.io/derdeno/openreplay/spot:latest-ee
-    domainname: app.svc.cluster.local
     container_name: spot
     networks:
       openreplay-net:
@@ -401,7 +393,6 @@ services:
   
   storage-openreplay:
     image: ghcr.io/derdeno/openreplay/storage:latest-ee
-    domainname: app.svc.cluster.local
     container_name: storage
     networks:
       openreplay-net:
@@ -427,7 +418,6 @@ services:
   
   assets-openreplay:
     image: ghcr.io/derdeno/openreplay/assets:latest-ee
-    domainname: app.svc.cluster.local
     container_name: assets
     networks:
       openreplay-net:
@@ -453,7 +443,6 @@ services:
   
   assist-openreplay:
     image: ghcr.io/derdeno/openreplay/assist:latest-ee
-    domainname: app.svc.cluster.local
     container_name: assist
     networks:
       openreplay-net:
@@ -479,7 +468,6 @@ services:
 
   assist-stats-openreplay:
     image: ghcr.io/derdeno/openreplay/assist-stats:latest-ee
-    domainname: app.svc.cluster.local
     container_name: assist-stats
     networks:
       openreplay-net:
@@ -503,7 +491,6 @@ services:
   
   canvases-openreplay:
     image: ghcr.io/derdeno/openreplay/canvases:latest-ee
-    domainname: app.svc.cluster.local
     container_name: canvases
     networks:
       openreplay-net:
@@ -529,7 +516,6 @@ services:
   
   chalice-openreplay:
     image: ghcr.io/derdeno/openreplay/chalice:latest-ee
-    domainname: app.svc.cluster.local
     container_name: chalice
     networks:
       openreplay-net:
@@ -555,7 +541,6 @@ services:
 
   crons-openreplay:
     image: ghcr.io/derdeno/openreplay/crons:latest-ee
-    domainname: app.svc.cluster.local
     container_name: crons
     networks:
       openreplay-net:
@@ -609,7 +594,6 @@ services:
   
   db-openreplay:
     image: ghcr.io/derdeno/openreplay/db:latest-ee
-    domainname: app.svc.cluster.local
     container_name: db
     networks:
       openreplay-net:
@@ -635,7 +619,6 @@ services:
   
   ender-openreplay:
     image: ghcr.io/derdeno/openreplay/ender:latest-ee
-    domainname: app.svc.cluster.local
     container_name: ender
     networks:
       openreplay-net:
@@ -661,7 +644,6 @@ services:
   
   frontend-openreplay:
     image: ghcr.io/derdeno/openreplay/frontend:latest-ee
-    domainname: app.svc.cluster.local
     container_name: frontend
     networks:
       openreplay-net:
@@ -687,7 +669,6 @@ services:
   
   heuristics-openreplay:
     image: ghcr.io/derdeno/openreplay/heuristics:latest-ee
-    domainname: app.svc.cluster.local
     container_name: heuristics
     networks:
       openreplay-net:

@@ -14,4 +14,4 @@ ENV LOG_DIR=/bitnami/kafka/logs \
     PATH=/usr/lib/kafka/bin:$PATH
 
 ENTRYPOINT ["/sbin/tini", "--", "/usr/local/bin/start-kafka.sh"]
-CMD ["/usr/lib/kafka/config/kraft/server.properties"]
+CMD ["/usr/lib/kafka/config/server.properties.original"]

@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-CONFIG_FILE="${1:-/usr/lib/kafka/config/kraft/server.properties}"
+CONFIG_FILE="${1:-/usr/lib/kafka/config/server.properties.original}"
 DATA_DIR="${KAFKA_LOG_DIRS:-/bitnami/kafka/data}"
 
 # Create data directory if it doesn't exist
@@ -84,7 +84,7 @@ if [ -n "$KAFKA_NODE_ID" ]; then
     CONFIG_FILE="/tmp/server.properties"
 
     # Copy base config and remove values we'll override
-    cp /usr/lib/kafka/config/kraft/server.properties "$CONFIG_FILE"
+    cp /usr/lib/kafka/config/server.properties.original "$CONFIG_FILE"
 
     # Remove conflicting default values from base config
     sed -i '/^node.id=/d' "$CONFIG_FILE"

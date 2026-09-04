@@ -139,7 +139,7 @@ services:
     networks:
       - openreplay-net
     volumes:
-      - ./migration-files/init_pg_schema.sql:/tmp/init_schema.sql
+      - ../../ee/scripts/schema/db/init_dbs/postgresql/init_schema.sql:/tmp/init_schema.sql:ro
     environment:
       PGHOST: postgresql
       PGPORT: 5432
@@ -170,7 +170,7 @@ services:
     networks:
       - openreplay-net
     volumes:
-      - ./migration-files/init_ch_schema.sql:/tmp/init_schema.sql
+      - ../../ee/scripts/schema/db/init_dbs/clickhouse/create/init_schema.sql:/tmp/init_schema.sql:ro
     environment:
       CH_HOST: "clickhouse-openreplay-clickhouse.db.svc.cluster.local"
       CH_PORT: "9000"
@@ -461,6 +461,24 @@ services:
       clickhouse:
         condition: service_healthy
       minio:
+        condition: service_healthy
+    environment: {}  # Fallback empty environment if env_file is missing
+    restart: unless-stopped
+
+  assist-api-openreplay:
+    image: ghcr.io/derdeno/openreplay/assist-api:latest-ee
+    container_name: assist-api
+    networks:
+      openreplay-net:
+        aliases:
+          - assist-api-openreplay
+          - assist-api-openreplay.app.svc.cluster.local
+    env_file:
+      - docker-envs/assist-api.env
+    depends_on:
+      postgresql:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     environment: {}  # Fallback empty environment if env_file is missing
     restart: unless-stopped

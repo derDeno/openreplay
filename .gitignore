@@ -4,6 +4,7 @@ node_modules
 *DS_Store
 *.env
 !scripts/docker-compose/docker-envs/assist-stats.env
+!scripts/docker-compose/docker-envs/assist-api.env
 *.log
 **/*.envrc
 .idea
